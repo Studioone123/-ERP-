@@ -1,0 +1,94 @@
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  application:
+    name: erp-system
+  datasource:
+    driver-class-name: org.h2.Driver
+    # 数据文件默认放在 D 盘，可用环境变量 ERP_DB_PATH 覆盖
+    url: jdbc:h2:file:${ERP_DB_PATH:D:/erp-data/erpdb};MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ''
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+      encoding: UTF-8
+      continue-on-error: false
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+  # 默认用进程内缓存：没有 Redis 也能享受缓存优化。
+  # 启用 redis profile 时由 application-redis.yml 覆盖成 redis。
+  cache:
+    type: simple
+    cache-names: erp:dashboard,erp:options
+
+# Actuator 默认只暴露必要的只读端点；health 里关闭 Redis 探测，
+# 这样未启用 redis profile 时 /actuator/health 不会因为没连 Redis 而报 DOWN。
+management:
+  health:
+    redis:
+      enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,caches
+  endpoint:
+    health:
+      show-details: when_authorized
+
+logging:
+  level:
+    root: INFO
+    com.erp: INFO
+  # %X{traceId} 来自 TraceFilter 写入的 MDC，是后续做分布式链路追踪的基础
+  pattern:
+    console: '%d{HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{20} - %msg%n'
+
+# 接口文档：/swagger-ui/index.html 与 /v3/api-docs
+# 按 tag 分组、按字母排序，让几十个接口在页面上仍然好找
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+    doc-expansion: none
+  api-docs:
+    path: /v3/api-docs
+
+erp:
+  security:
+    # 登录令牌有效期（小时）
+    token-ttl-hours: 12
+  # AI 经营分析：OpenAI 兼容协议（DeepSeek / 通义 / Kimi / OpenAI 均可，只改 base-url 与 model）。
+  # 不配 api-key 时自动使用内置规则引擎，功能照常可用、页面标注「本地规则模式」。
+  # 密钥只走环境变量 ERP_AI_API_KEY，不要写进本文件，避免随 Git 泄露。
+  ai:
+    enabled: true
+    api-key: ${ERP_AI_API_KEY:}
+    base-url: ${ERP_AI_BASE_URL:https://api.deepseek.com}
+    model: ${ERP_AI_MODEL:deepseek-chat}
+    timeout-seconds: 45
+    max-tokens: 1500
+  # 会话存哪里：memory（默认，零依赖）| redis（启用 redis profile 时自动切换）
+  # 见 SessionStore 接口与两个 @ConditionalOnProperty 实现
+  session:
+    store: memory
+  internal:
+    # OpenFeign 客户端的目标地址。将来把某个模块拆成独立服务，
+    # 只改这里指向新服务即可，调用方代码一行都不用动。
+    base-url: http://localhost:${server.port:8080}

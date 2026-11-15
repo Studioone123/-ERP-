@@ -1,0 +1,50 @@
+# ============================================================================
+# Spring Cloud 模式：--spring.profiles.active=cloud（可与 redis 叠加：redis,cloud）
+#
+# 说明：本项目是单体应用，没有注册中心也没有配置中心。
+# 这里启用的是 Spring Cloud 中「不依赖额外进程也能独立工作」的部分：
+#   - OpenFeign       声明式 HTTP 客户端，为将来拆分服务预留调用边界
+#   - Resilience4J    熔断 / 超时隔离，防止下游拖垮上游
+#   - Actuator        健康检查、指标、缓存、动态配置刷新端点
+# 需要独立进程的 Gateway / Eureka / Config Server 见《架构演进.md》。
+# ============================================================================
+spring:
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 2000
+            read-timeout: 3000
+            logger-level: basic
+
+# 熔断器按「实例名」配置，CloudProbeService 里用同名实例包裹 Feign 调用。
+# minimum-number-of-calls 设小一点，方便在演示环境里快速观察到 OPEN 状态。
+resilience4j:
+  circuitbreaker:
+    instances:
+      erpInternal:
+        sliding-window-size: 10
+        minimum-number-of-calls: 3
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 2
+        automatic-transition-from-open-to-half-open-enabled: true
+  timelimiter:
+    instances:
+      erpInternal:
+        timeout-duration: 3s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,caches,refresh,circuitbreakers
+  endpoint:
+    health:
+      show-details: always
+
+# 演示用：把这个值改小 / 改坏，即可观察 Feign 调用失败后触发熔断降级
+erp:
+  cloud:
+    probe-enabled: true

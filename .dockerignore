@@ -1,0 +1,10 @@
+target/
+logs/
+*.mv.db
+*.trace.db
+.git/
+.github/
+.workbuddy/
+*.md
+*.bat
+.idea/

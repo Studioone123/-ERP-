@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 项目级 Maven 配置：绕开本机全局 settings.xml 里已失效的 http 镜像，
+     并把依赖仓库放到 D 盘，避免占用 C 盘。 -->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0 https://maven.apache.org/xsd/settings-1.2.0.xsd">
+    <localRepository>D:/maven/repository</localRepository>
+    <mirrors>
+        <mirror>
+            <id>aliyun-public</id>
+            <name>aliyun public</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <mirrorOf>*</mirrorOf>
+        </mirror>
+    </mirrors>
+</settings>

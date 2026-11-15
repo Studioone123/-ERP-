@@ -1,0 +1,35 @@
+# ============================================================================
+# Redis 模式：--spring.profiles.active=redis
+#
+# 设计原则：这是一个「可选增强」profile，不是运行前提。
+# 不启用它时，会话走进程内存、缓存走 ConcurrentHashMap，系统零配置可跑；
+# 启用后，会话与缓存迁到 Redis，多实例部署时登录态才能共享。
+# ============================================================================
+spring:
+  data:
+    redis:
+      host: ${ERP_REDIS_HOST:127.0.0.1}
+      port: ${ERP_REDIS_PORT:6379}
+      # 本机 Redis 8.4.0 默认无密码，留空即可；有密码时设 ERP_REDIS_PASSWORD
+      password: ${ERP_REDIS_PASSWORD:}
+      database: ${ERP_REDIS_DB:0}
+      timeout: 3s
+      connect-timeout: 3s
+  cache:
+    type: redis
+    redis:
+      # 兜底过期时间：即使某个写操作忘了失效，60 秒后也一定会回源重算。
+      # 这是缓存与数据库不一致的「最后一道保险」。
+      time-to-live: 60s
+      cache-null-values: false
+
+management:
+  health:
+    redis:
+      enabled: true
+
+erp:
+  session:
+    # 切换会话存储实现：RedisSessionStore 用 Redis 原生 TTL 自动过期，
+    # 不再需要内存实现里的惰性清理，也不会因进程重启丢登录态。
+    store: redis

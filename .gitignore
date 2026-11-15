@@ -1,0 +1,30 @@
+# Maven 构建产物（jar 72MB，绝不入库）
+target/
+
+# IDE 与编辑器
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# 运行时数据：H2 数据库、日志
+*.mv.db
+*.trace.db
+logs/
+*.log
+erp-data/
+
+# 本地工作笔记与私有配置（不属于项目源码）
+.workbuddy/
+
+# 密钥与本地环境变量（API Key 一律走环境变量，禁止提交）
+.env
+.env.*
+*.pem
+*.key
+
+# 操作系统杂项
+.DS_Store
+Thumbs.db

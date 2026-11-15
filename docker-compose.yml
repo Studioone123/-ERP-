@@ -1,0 +1,53 @@
+# ---------------------------------------------------------------------------
+# 一键起「应用 + Redis」的完整环境：
+#   docker compose up -d --build
+#   http://localhost:8080   (admin / admin123)
+#   http://localhost:8080/swagger-ui.html
+#
+# 只起应用、不启用 Redis 时：docker compose up -d erp --no-deps，
+# 并把 SPRING_PROFILES_ACTIVE 改成空（见下方注释）。
+# ---------------------------------------------------------------------------
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: erp-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  erp:
+    build: .
+    container_name: erp-app
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      # 启用 Redis 会话/缓存 + OpenFeign/熔断/Actuator；不想要就改成 "" 并去掉 redis 服务
+      SPRING_PROFILES_ACTIVE: "redis,cloud"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      ERP_DB_PATH: /data/erpdb
+      ERP_REDIS_DB: 0
+    volumes:
+      - erp-data:/data
+    restart: unless-stopped
+    # 用 bash 的 /dev/tcp 探端口，不依赖镜像里是否装了 curl
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+volumes:
+  redis-data:
+  erp-data:
